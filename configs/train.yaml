@@ -1,0 +1,44 @@
+defaults:
+  - optimizer: amuse
+  - _self_
+  - experiment: lg_a
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+hydra:
+  run:
+    dir: .
+  output_subdir: null
+  job:
+    chdir: false
+task: lighterglue
+run_dir: ???
+data_root: null
+pairs_dir: temp/l76_run/pairs_v1
+pair_split: train
+cache_dir: temp/l76_run/cache_official
+eval_cache_dir: temp/l76_run/eval_official_5pct
+xfeat_weights: weights/xfeat.pt
+teacher_weights: weights/xfeat.pt
+lg_weights: weights/xfeat-lighterglue.pt
+init_matcher_only: true
+resume_from: null
+stop_after_steps: null
+seed: 20260927
+device: cuda
+precision: fp32
+batch_size: 1
+accumulation: 4
+num_workers: 0
+top_k: 1024
+grad_clip: 1.0
+max_steps: 1000
+save_every: 100
+# Top K validation checkpoints, plus latest and any export references; null keeps all.
+checkpoint_keep_best: 3
+eval_every: 100
+matcher:
+  flash: false
+  mp: false
+  width_confidence: -1
+  depth_confidence: -1
+  filter_threshold: 0.1

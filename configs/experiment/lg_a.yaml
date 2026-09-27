@@ -1,0 +1,4 @@
+# @package _global_
+task: lighterglue
+max_steps: 1000
+init_matcher_only: true

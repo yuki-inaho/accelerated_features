@@ -100,6 +100,8 @@ include = [
     "modules/typecheck.py",
     "modules/utils.py",
     "modules/xfeat.py",
+    "xfeat_training",
+    "scripts",
     "tests",
 ]
 exclude = ["notebooks", "third_party"]
