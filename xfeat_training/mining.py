@@ -47,7 +47,7 @@ def source_identity() -> dict[str, Any]:
         return subprocess.check_output(["git", *args], cwd=REPO_ROOT, text=True).strip()
 
     paths = {REPO_ROOT / p for p in git("ls-files").splitlines() if (REPO_ROOT / p).is_file()}
-    for folder in ("xfeat_training", "scripts", "configs", "tests"):
+    for folder in ("modules", "xfeat_training", "scripts", "configs", "tests"):
         paths.update(p for p in (REPO_ROOT / folder).rglob("*") if p.suffix in {".py", ".yaml"})
     paths.update(p for p in (REPO_ROOT / "third_party/amuse").glob("*") if p.is_file())
     files = {str(p.relative_to(REPO_ROOT)): file_sha256(p) for p in sorted(paths)}

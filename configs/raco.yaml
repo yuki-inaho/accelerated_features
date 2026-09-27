@@ -1,0 +1,71 @@
+defaults:
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+hydra:
+  run:
+    dir: .
+  output_subdir: null
+  job:
+    chdir: false
+task: raco_rank
+run_dir: ???
+pairs_dir: ???
+data_root: null
+pair_split: train
+xfeat_weights: weights/xfeat.pt
+init_bundle: null
+resume_from: null
+stop_after_steps: null
+selection_metric: null
+device: cuda
+precision: fp32
+seed: 20260927
+batch_size: 1
+num_workers: 0
+accumulation: 1
+max_steps: 12
+save_every: 3
+eval_every: 3
+evaluate_initial: true
+checkpoint_keep_best: 3
+grad_clip: 1.0
+optimizer:
+  name: adamw
+  lr: 0.0002
+  weight_decay: 0.0001
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+final_lr: 1.0e-6
+temperature_start: 0.5
+temperature_end: 0.05
+candidate_limit: 8192
+detection_threshold: 0.05
+border: 4
+sigma_min: 0.05
+budgets: [128, 256, 512, 1024, 2048, 4096]
+rank_threshold: 3.0
+covariance_threshold: 8.0
+covariance_diagnostics: [4.0, 8.0, 12.0]
+val_frames: 4
+val_seed: 20260928
+auto_stop:
+  enabled: false
+  interval: 1000
+  window: 3
+  rank_minimum_gain: 0.001
+  covariance_minimum_gain: 0.01
+# null uses native size. Otherwise [height, width], each divisible by 32.
+image_size: null
+augmentation:
+  rotation_small_probability: 0.8
+  rotation_small_degrees: 30.0
+  scale: [0.7, 1.4]
+  translation: 0.25
+  shear: 0.15
+  projective: 0.0001
+  brightness: 0.15
+  gamma: [0.8, 1.2]
+  noise: 0.02
+  blur_probability: 0.3
+  minimum_overlap: 0.1

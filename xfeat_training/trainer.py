@@ -25,6 +25,7 @@ from xfeat_training.optim import (
     restore_optimizer,
     restore_rng,
 )
+from xfeat_training.selection import checkpoint_candidate, selection_rank
 
 CHECKPOINT_SCHEMA = 2
 RUN_CONTROL_KEYS = {"run_dir", "resume_from", "stop_after_steps", "save_every", "checkpoint_keep_best"}
@@ -329,12 +330,23 @@ def train_loop(
                 del task.export_origin
     writer = SummaryWriter(str(run_dir / "tensorboard"))
     invalid_streak, overflow_streak = 0, 0
+    termination_reason = None
     try:
         with (run_dir / "metrics.jsonl").open("x") as stream:
+            if cfg.get("evaluate_initial", False) and checkpoint is None:
+                with evaluation_parameters(task.model, optimizer):
+                    initial_metrics = task.evaluate(0)
+                atomic_json(run_dir / "initial_validation.json", initial_metrics)
+                for name, value in initial_metrics.items():
+                    if type(value) in (int, float):
+                        writer.add_scalar(f"validation/{name}", value, 0)
+                writer.flush()
             while state["successful_step"] < stop:
                 started = time.perf_counter()
                 totals: dict[str, float] = {}
                 sampled = []
+                if hasattr(task, "before_update"):
+                    task.before_update(state["successful_step"], optimizer)
                 task.model.train()
                 from xfeat_training.objectives import freeze_batchnorm
 
@@ -393,12 +405,8 @@ def train_loop(
                 if step % cfg["eval_every"] == 0 or step == cfg["max_steps"]:
                     with evaluation_parameters(task.model, optimizer):
                         metrics = task.evaluate(step)
-                        candidate = {"step": step, "primary_f1": metrics["primary_f1"], "TP": metrics["TP"]}
-
-                        def rank(item):
-                            return item["primary_f1"], item["TP"], -item["step"]
-
-                        if state["best"] is None or rank(candidate) > rank(state["best"]):
+                        candidate = checkpoint_candidate(metrics, step, cfg)
+                        if state["best"] is None or selection_rank(candidate) > selection_rank(state["best"]):
                             state["best"] = candidate
                             state["best_model"] = _cpu_tree(task.model.state_dict())
                             task.export("best", step)
@@ -408,6 +416,12 @@ def train_loop(
                     with evaluation_parameters(task.model, optimizer):
                         task.export("last", step)
                 state["sampler"] = sampler.state_dict()
+                if cfg.get("auto_stop", {}).get("enabled", False):
+                    history = state.setdefault("continuation_history", {"validation": [], "losses": []})
+                    history["losses"] = (history["losses"] + [totals["loss"]])[-200:]
+                    if metrics is not None:
+                        history["validation"].append({key: value for key, value in metrics.items() if key != "rows"})
+                    task.continuation_history = history
                 checkpoint_written = step % cfg["save_every"] == 0 or metrics is not None or final
                 if checkpoint_written:
                     path = run_dir / "checkpoints" / f"step_{step:06d}.pt"
@@ -475,9 +489,9 @@ def train_loop(
                 for name, value in state["skips"].items():
                     writer.add_scalar(f"skips/{name}", value, step)
                 if metrics is not None:
-                    for name in ("primary_f1", "precision", "recall", "TP", "P", "G", "A"):
-                        if metrics.get(name) is not None:
-                            writer.add_scalar(f"validation/{name}", metrics[name], step)
+                    for name, value in metrics.items():
+                        if type(value) in (int, float):
+                            writer.add_scalar(f"validation/{name}", value, step)
                 if (step == 1 or metrics is not None) and getattr(task, "preview", None) is not None:
                     writer.add_image("pair/source", task.preview.detach().cpu(), step)
                 writer.flush()
@@ -490,6 +504,13 @@ def train_loop(
                         f"step {step}/{cfg['max_steps']} loss={totals['loss']:.5f} skipped={sum(state['skips'].values())}",
                         flush=True,
                     )
+                if checkpoint_written and hasattr(task, "stop_reason"):
+                    termination_reason = task.stop_reason(step)
+                    if termination_reason is not None:
+                        if not isinstance(termination_reason, str):
+                            raise TypeError("stop_reason must return a string or None")
+                        print(f"Stopped at optimizer boundary {step}: {termination_reason}", flush=True)
+                        break
     except Exception as error:
         atomic_json(
             run_dir / "failure.json",
@@ -505,7 +526,12 @@ def train_loop(
         raise
     finally:
         writer.close()
-    atomic_json(run_dir / "completed.json", {"successful_step": state["successful_step"], "signature": signature})
+    completed = {"successful_step": state["successful_step"], "signature": signature}
+    if hasattr(task, "stop_reason"):
+        completed["stop_reason"] = termination_reason or (
+            "max_steps" if stop == cfg["max_steps"] else "stop_after_steps"
+        )
+    atomic_json(run_dir / "completed.json", completed)
     return state
 
 

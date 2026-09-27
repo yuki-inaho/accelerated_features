@@ -97,6 +97,7 @@ include = [
     "modules/interpolator.py",
     "modules/lighterglue.py",
     "modules/model.py",
+    "modules/raco.py",
     "modules/typecheck.py",
     "modules/utils.py",
     "modules/xfeat.py",

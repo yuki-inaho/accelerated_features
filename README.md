@@ -293,3 +293,12 @@ If you find this code useful for your research, please cite the paper:
 <img align="left" width="auto" height="50" src="./figs/ufmg.png">
 <img align="right" width="auto" height="50" src="./figs/verlab.png">
 <br/>
+
+## Optional ranking and covariance heads
+
+The [XFeat ranking/covariance extension](docs/raco.md) adds independently trainable
+heads, a Hydra training entry point, portable inference bundles, and NPZ extraction.
+
+Validation-selected fine-tuned weights are available in the
+[RGB-D + RaCo models release](https://github.com/yuki-inaho/accelerated_features/releases/tag/rgbd-raco-v1).
+See [model formats, loading examples, and limitations](docs/pretrained_models.md).

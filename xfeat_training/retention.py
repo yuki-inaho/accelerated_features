@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import fcntl
 import json
-import math
 import os
 import re
 from datetime import datetime, timezone
@@ -19,6 +18,7 @@ from typing import Any
 import torch
 
 from xfeat_training.data import file_sha256, json_hash
+from xfeat_training.selection import checkpoint_candidate, selection_rank
 
 
 def _sync_directory(path: Path) -> None:
@@ -105,25 +105,18 @@ def _validation_score(
     if not expected:
         return None, None
     metric = json.loads(metric_path.read_text())
-    f1, tp = metric["primary_f1"], metric["TP"]
     if (
         metric != row["validation"]
         or metric["split"] != "val"
         or metric["evaluation_hash"] != evaluation_hash
         or metric["pair_hash"] != pair_hash
-        or not isinstance(f1, (int, float))
-        or isinstance(f1, bool)
-        or not math.isfinite(f1)
-        or not 0 <= f1 <= 1
-        or type(tp) is not int
-        or tp < 0
     ):
         raise ValueError("Invalid checkpoint ranking metric")
-    return {"primary_f1": f1, "TP": tp, "step": step}, file_sha256(metric_path)
+    return checkpoint_candidate(metric, step, config), file_sha256(metric_path)
 
 
 def prune_checkpoints(run_dir: str | Path, keep_best: int) -> dict[str, Any]:
-    """Keep top K by val F1/TP/earlier step, plus latest and export references."""
+    """Keep top K by explicit val metric (default F1/TP), plus latest and exports."""
     from xfeat_training.trainer import CHECKPOINT_SCHEMA, checkpoint_signature
 
     if isinstance(keep_best, bool) or not isinstance(keep_best, int) or keep_best < 1:
@@ -260,11 +253,8 @@ def prune_checkpoints(run_dir: str | Path, keep_best: int) -> dict[str, Any]:
             raise ValueError("Checkpoint missing without retention evidence")
         ranked = sorted(
             (name for name, record in candidates.items() if record["score"] is not None),
-            key=lambda name: (
-                -candidates[name]["score"]["primary_f1"],
-                -candidates[name]["score"]["TP"],
-                candidates[name]["step"],
-            ),
+            key=lambda name: selection_rank(candidates[name]["score"]),
+            reverse=True,
         )
         keep = set(ranked[:keep_best]) | set(protected)
         if not set(protected) <= set(candidates):

@@ -33,13 +33,13 @@ LG_AUX = {
 
 
 def parameter_groups(model: nn.Module, task: str, *, lr: float, weight_decay: float) -> list[dict[str, Any]]:
-    if task not in {"xfeat", "lighterglue"}:
+    if task not in {"xfeat", "lighterglue", "raco_rank", "raco_covariance"}:
         raise ValueError(f"Unknown optimizer task: {task}")
     names_and_params = [(n, p) for n, p in model.named_parameters(remove_duplicate=False) if p.requires_grad]
     storage = [(str(p.device), p.untyped_storage().data_ptr()) for _, p in names_and_params]
     if len(set(storage)) != len(storage):
         raise ValueError("Trainable parameters share storage or aliases")
-    patterns = XFEAT_AUX if task == "xfeat" else LG_AUX
+    patterns = XFEAT_AUX if task == "xfeat" else LG_AUX if task == "lighterglue" else set()
     partitions: dict[str, list[Any]] = {"muon": [], "aux_decay": [], "aux_no_decay": []}
     for name, parameter in names_and_params:
         if parameter.ndim not in (1, 2, 4):
@@ -68,6 +68,8 @@ def parameter_groups(model: nn.Module, task: str, *, lr: float, weight_decay: fl
 
 
 def build_optimizer(model: nn.Module, task: str, config: Mapping[str, Any], *, scheduler: Any = None) -> Optimizer:
+    if task.startswith("raco_") and config["name"] != "adamw":
+        raise ValueError("RaCo head tasks require AdamW")
     if scheduler is not None or config.get("scheduler") is not None:
         raise ValueError("External scheduler is not supported")
     spec = copy.deepcopy(dict(config))
