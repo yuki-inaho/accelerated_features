@@ -6,7 +6,11 @@
     The main difference is the use of poselib instead of OpenCV's vanilla RANSAC for E_mat, which is more stable and MUCH and faster.
 """
 
-import argparse, glob, sys, os, time
+import argparse
+import glob
+import os
+import sys
+import time
 import torch
 from torch.utils.data import Dataset, DataLoader
 import cv2

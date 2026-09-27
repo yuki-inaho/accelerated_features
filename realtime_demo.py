@@ -9,8 +9,10 @@ import cv2
 import numpy as np
 import torch
 
-from time import time, sleep
-import argparse, sys, tqdm
+from time import sleep, time
+import argparse
+import sys
+import tqdm
 import threading
 
 from modules.xfeat import XFeat
@@ -48,7 +50,7 @@ class FrameGrabber(threading.Thread):
     def get_last_frame(self):
         return self.frame
 
-class CVWrapper():
+class CVWrapper:
     def __init__(self, mtd):
         self.mtd = mtd
     def detectAndCompute(self, x, mask=None):

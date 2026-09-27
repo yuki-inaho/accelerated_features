@@ -1,24 +1,47 @@
 """
-	"XFeat: Accelerated Features for Lightweight Image Matching, CVPR 2024."
-	https://www.verlab.dcc.ufmg.br/descriptors/xfeat_cvpr24/
+"XFeat: Accelerated Features for Lightweight Image Matching, CVPR 2024."
+https://www.verlab.dcc.ufmg.br/descriptors/xfeat_cvpr24/
 """
+
+from __future__ import annotations
+
+from typing import Literal
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from jaxtyping import Float, Int
+from torch import Tensor
+
 
 class InterpolateSparse2d(nn.Module):
-    """ Efficiently interpolate tensor at given sparse 2D positions. """ 
-    def __init__(self, mode = 'bicubic', align_corners = False): 
+    """Efficiently interpolate tensor at given sparse 2D positions."""
+
+    def __init__(
+        self,
+        mode: Literal["nearest", "bilinear", "bicubic"] = "bicubic",
+        align_corners: bool = False,
+    ) -> None:
         super().__init__()
         self.mode = mode
         self.align_corners = align_corners
 
-    def normgrid(self, x, H, W):
-        """ Normalize coords to [-1,1]. """
-        return 2. * (x/(torch.tensor([W-1, H-1], device = x.device, dtype = x.dtype))) - 1.
+    def normgrid(
+        self,
+        x: Int[Tensor, "B N 2"] | Float[Tensor, "B N 2"],
+        H: int,
+        W: int,
+    ) -> Float[Tensor, "B N 2"]:
+        """Normalize coords to [-1,1]."""
+        return 2.0 * (x / torch.tensor([W - 1, H - 1], device=x.device, dtype=x.dtype)) - 1.0
 
-    def forward(self, x, pos, H, W):
+    def forward(
+        self,
+        x: Float[Tensor, "B C H W"],
+        pos: Int[Tensor, "B N 2"] | Float[Tensor, "B N 2"],
+        H: int,
+        W: int,
+    ) -> Float[Tensor, "B N C"]:
         """
         Input
             x: [B, C, H, W] feature tensor
@@ -29,5 +52,5 @@ class InterpolateSparse2d(nn.Module):
             [B, N, C] sampled channels at 2d positions
         """
         grid = self.normgrid(pos, H, W).unsqueeze(-2).to(x.dtype)
-        x = F.grid_sample(x, grid, mode = self.mode , align_corners = False)
-        return x.permute(0,2,3,1).squeeze(-2)
+        x = F.grid_sample(x, grid, mode=self.mode, align_corners=self.align_corners)
+        return x.permute(0, 2, 3, 1).squeeze(-2)

@@ -15,7 +15,9 @@ import glob
 from modules.dataset.megadepth.utils import read_megadepth_gray, read_megadepth_depth, fix_path_from_d2net
 import numpy.random as rnd
 
-import pdb, tqdm, os
+import os
+import pdb
+import tqdm
 
 
 class MegaDepthDataset(Dataset):

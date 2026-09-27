@@ -1,0 +1,102 @@
+[project]
+name = "accelerated-features"
+version = "0.1.0"
+description = "XFeat: Accelerated Features for Lightweight Image Matching (CVPR 2024)"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = "Apache-2.0"
+dependencies = [
+    "beartype>=0.19",
+    "jaxtyping>=0.3",
+    "kornia==0.7.2",
+    "numpy>=1.26",
+    "opencv-contrib-python-headless>=4.10,<5",
+    "torch>=2.2",
+    "tqdm>=4.66",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.11",
+    "ty>=0.0.1a25",
+]
+eval = [
+    "gdown>=5.0",
+    "h5py>=3.10",
+    "matplotlib>=3.8",
+    "pandas>=2.0",
+    "poselib>=2.0.4",
+]
+train = [
+    "gdown>=5.0",
+    "h5py>=3.10",
+    "matplotlib>=3.8",
+    "pandas>=2.0",
+    "tensorboard>=2.16",
+    "torchvision>=0.17",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"
+markers = [
+    "gpu: test requires a CUDA device",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+extend-exclude = ["notebooks", "third_party"]
+
+[tool.ruff.lint]
+select = [
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "NPY", # numpy-specific
+    "RUF", # ruff-specific
+    "SIM", # flake8-simplify
+    "UP",  # pyupgrade
+    "W",   # pycodestyle warnings
+]
+ignore = [
+    "E501",   # long lines are tolerated in upstream research code
+    "E741",   # ambiguous variable names, kept for upstream compatibility
+    "F722",   # ruff misreads jaxtyping dimension strings as forward references
+    "RUF001", # ambiguous unicode characters (arrows/emoji in docstrings)
+    "RUF002",
+    "RUF003",
+    "UP031",  # printf-style formatting in upstream code
+    "UP037",  # jaxtyping shapes must stay quoted, e.g. Float[Tensor, "N 2"]
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Research scripts kept in the upstream style; the typed inference path
+# (modules/xfeat.py, modules/model.py, modules/interpolator.py, modules/lighterglue.py,
+# modules/typecheck.py, modules/utils.py, inference.py, tests/) is lint-clean.
+"modules/dataset/**" = ["B006", "B007", "B008", "B905", "C4", "E101", "E402", "E701", "E702", "E722", "F401", "F403", "F405", "F841", "I001", "NPY", "RUF005", "RUF012", "RUF046", "RUF059", "SIM", "UP008", "UP015", "UP032", "W191", "W291", "W292", "W293"]
+"modules/eval/**" = ["B006", "B007", "B008", "B905", "C4", "E101", "E402", "E701", "E702", "E722", "F401", "F403", "F405", "F841", "I001", "NPY", "RUF005", "RUF012", "RUF046", "RUF059", "SIM", "UP008", "UP015", "UP032", "W191", "W291", "W292", "W293"]
+"modules/training/**" = ["B006", "B007", "B008", "B905", "C4", "E101", "E402", "E701", "E702", "E722", "F401", "F403", "F405", "F841", "I001", "NPY", "RUF005", "RUF012", "RUF046", "RUF059", "SIM", "UP008", "UP015", "UP032", "W191", "W291", "W292", "W293"]
+"realtime_demo.py" = ["B006", "B007", "B008", "B905", "C4", "E101", "E402", "E701", "E702", "E722", "F401", "F403", "F405", "F841", "I001", "NPY", "RUF005", "RUF012", "RUF046", "RUF059", "SIM", "UP008", "UP015", "UP032", "W191", "W291", "W292", "W293"]
+
+[tool.ty.environment]
+python-version = "3.12"
+
+[tool.ty.src]
+include = [
+    "inference.py",
+    "modules/interpolator.py",
+    "modules/lighterglue.py",
+    "modules/model.py",
+    "modules/typecheck.py",
+    "modules/xfeat.py",
+    "tests",
+]
+exclude = ["notebooks", "third_party"]

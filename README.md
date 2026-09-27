@@ -99,6 +99,24 @@ pip install torch==1.10.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stab
 pip install opencv-contrib-python tqdm
 ```
 
+### Quickstart with uv (recommended)
+This repository is also set up as a [uv](https://docs.astral.sh/uv/) project with a committed `uv.lock`, so the exact dependency set is reproducible on any machine. Python 3.12 is used by default.
+
+```bash
+git clone https://github.com/verlab/accelerated_features.git
+cd accelerated_features
+
+# Create the .venv and install the core inference dependencies (plus dev tools)
+uv sync
+
+# Optional: also install the evaluation and training dependency groups
+uv sync --all-groups   # recommended if you plan to run benchmarks or training
+```
+
+`uv sync` is exclusive: it removes packages from any group you leave out. Opt into only what you need with `--group eval` (poselib, gdown, h5py, matplotlib, pandas) or `--group train` (torchvision, tensorboard, ...).
+
+The pretrained weights are already included in `weights/`, so inference works right away. CUDA is used automatically when available; pass `device="cpu"` (or `--device cpu`) to force CPU execution.
+
 ## Usage
 
 For your convenience, we provide ready to use notebooks for some examples.
@@ -136,6 +154,24 @@ xfeat = torch.hub.load('verlab/accelerated_features', 'XFeat', pretrained = True
 #Simple inference with batch sz = 1
 output = xfeat.detectAndCompute(torch.randn(1,3,480,640), top_k = 4096)[0]
 ```
+
+### Inference on your own images
+[`inference.py`](./inference.py) matches two images end to end with the bundled pretrained weights (`weights/xfeat.pt` by default) and verifies the matches with a RANSAC homography:
+
+```bash
+# Sparse XFeat features with mutual-nearest-neighbor matching (default)
+uv run inference.py path/to/image1.jpg path/to/image2.jpg --output matches.png
+
+# Semi-dense XFeat* with match refinement
+uv run inference.py path/to/image1.jpg path/to/image2.jpg --method xfeat-star
+
+# LighterGlue matcher (kornia based, pretrained weights included)
+uv run inference.py path/to/image1.jpg path/to/image2.jpg --method lighterglue
+```
+
+It prints the number of matches/inliers and an estimated homography, and optionally saves a match visualization. Useful flags: `--device cpu|cuda|mps`, `--weights path/to/checkpoint.pt`, `--top-k`, `--max-size`, `--ransac-thr`. Running `uv run inference.py` without arguments matches the sample pair in `assets/`.
+
+The public inference API (`modules/xfeat.py`, `modules/lighterglue.py`, `inference.py`) validates its inputs at runtime through [beartype](https://github.com/beartype/beartype) and [jaxtyping](https://github.com/patrick-kidder/jaxtyping) annotations, so malformed images fail fast with a clear error instead of a cryptic tensor shape mismatch.
 
 ### Training
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/verlab/accelerated_features/blob/main/notebooks/XFeat_training_example.ipynb)
@@ -214,6 +250,18 @@ Metrics (AUC @ 5 / 10 / 20)
 |-----------------|---------------|-----------|-------------------------------|-----------------------------------|
 | **Fast**  | 640           | 1300      | 0.444 / 0.610 / 0.746       | 0.469 / 0.633 / 0.762          |
 | **Accurate** | 1024          | 4096      | 0.564 / 0.710 / 0.819       | 0.591 / 0.738 / 0.841            |
+
+## Development
+
+The typed inference path uses [jaxtyping](https://github.com/patrick-kidder/jaxtyping) shape annotations with [beartype](https://github.com/beartype/beartype) runtime validation (`modules/typecheck.py`). Quality gates are pinned in `pyproject.toml`:
+
+```bash
+uv run pytest          # end-to-end tests: pretrained weight loading, sparse/semi-dense/LighterGlue matching, homography verification
+uv run ruff check .    # lint; legacy research scripts keep the upstream style through documented per-file ignores
+uv run ty check        # static type checking of the inference path and tests
+```
+
+Set `XFEAT_TEST_DEVICE=cpu` (or `cuda`, `mps`) to pin the device used by the test suite.
 
 ## Contributing
 Contributions to XFeat are welcome! 

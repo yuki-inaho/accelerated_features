@@ -63,7 +63,7 @@ from modules.dataset.megadepth import megadepth_warper
 from torch.utils.data import Dataset, DataLoader
 
 
-class Trainer():
+class Trainer:
     """
         Class for training XFeat with default params as described in the paper.
         We use a blend of MegaDepth (labeled) pairs with synthetically warped images (self-supervised).
