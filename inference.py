@@ -24,6 +24,7 @@ from numpy import ndarray as NDArray
 from torch import Tensor
 
 from modules.typecheck import InlierMask, KeypointsArray, SparseFeaturesWithSize, typechecked
+from modules.utils import state_hash
 from modules.xfeat import DEFAULT_WEIGHTS, XFeat
 
 Method = Literal["xfeat", "xfeat-star", "lighterglue"]
@@ -190,7 +191,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default="xfeat",
         help="matcher backend (xfeat-star is semi-dense, lighterglue needs kornia)",
     )
-    parser.add_argument("--weights", type=Path, default=DEFAULT_WEIGHTS, help="path to the pretrained checkpoint")
+    parser.add_argument(
+        "--weights", type=Path, default=None, help="XFeat checkpoint (default: bundled official weights)"
+    )
+    parser.add_argument(
+        "--lg-weights", type=Path, default=None, help="LighterGlue bundle; includes its XFeat extractor"
+    )
     parser.add_argument("--device", default=None, help="torch device such as cuda, cpu or mps (default: auto)")
     parser.add_argument("--top-k", type=int, default=4096, dest="top_k", help="maximum number of keypoints")
     parser.add_argument("--max-size", type=int, default=None, dest="max_size", help="cap the largest image side")
@@ -202,7 +208,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     """Run pretrained XFeat inference on an image pair from the command line."""
     args = parse_args(argv)
-    xfeat = XFeat(weights=args.weights, top_k=args.top_k, device=args.device)
+    xfeat = load_models(args.weights, args.lg_weights, args.method, args.top_k, args.device)
     image0 = load_image(args.image1, max_size=args.max_size)
     image1 = load_image(args.image2, max_size=args.max_size)
 
@@ -215,7 +221,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         ransac_threshold=args.ransac_threshold,
     )
 
-    print(f"device: {xfeat.dev} | weights: {args.weights}")
+    print(f"device: {xfeat.dev} | weights: {args.weights or args.lg_weights or DEFAULT_WEIGHTS}")
     print(f"image1: {args.image1} {image0.shape[1]}x{image0.shape[0]}")
     print(f"image2: {args.image2} {image1.shape[1]}x{image1.shape[0]}")
     print(f"method: {result.method} | matches={result.matches} | inliers={result.inliers}")
@@ -229,6 +235,28 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"saved visualization: {args.output}")
 
     return 0
+
+
+def load_models(
+    weights: Path | None,
+    lg_weights: Path | None,
+    method: Method,
+    top_k: int = 4096,
+    device: str | None = None,
+) -> XFeat:
+    """Load a requested matcher with exactly the extractor stored in its bundle."""
+    if lg_weights is None:
+        return XFeat(weights=weights or DEFAULT_WEIGHTS, top_k=top_k, device=device)
+    if method != "lighterglue":
+        raise ValueError("--lg-weights requires --method lighterglue")
+    from modules.lighterglue import LighterGlue
+
+    matcher = LighterGlue(weights=lg_weights, device=device)
+    xfeat = XFeat(weights=weights or matcher.extractor_state, top_k=top_k, device=device)
+    if state_hash(xfeat.net.state_dict()) != matcher.extractor_hash:
+        raise ValueError("XFeat weights do not match the extractor in --lg-weights")
+    xfeat.lighterglue = matcher
+    return xfeat
 
 
 if __name__ == "__main__":
