@@ -1,5 +1,10 @@
-opencv-contrib-python-headless==4.10.0.84
-poselib
+# Inference/notebook dependencies. Use uv sync --all-groups for training.
+beartype>=0.19
+jaxtyping>=0.3
+opencv-contrib-python>=4.10,<5
+numpy>=1.26
+torch>=2.2
+poselib>=2.0.4
 kornia==0.7.2
-tqdm
-gdown
+tqdm>=4.66
+gdown>=5.0

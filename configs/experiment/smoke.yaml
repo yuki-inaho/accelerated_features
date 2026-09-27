@@ -1,0 +1,8 @@
+# @package _global_
+task: lighterglue
+pair_split: smoke
+max_steps: 12
+save_every: 5
+eval_every: 5
+optimizer:
+  warmup_steps: 3

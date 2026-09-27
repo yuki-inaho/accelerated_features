@@ -182,6 +182,12 @@ class XFeat(nn.Module):
         """
         if not self.kornia_available:
             raise RuntimeError("We rely on kornia for LightGlue. Install with: pip install kornia")
+        if len(d0["keypoints"]) == 0 or len(d1["keypoints"]) == 0:
+            return (
+                np.empty((0, 2), dtype=np.float32),
+                np.empty((0, 2), dtype=np.float32),
+                np.empty((0, 2), dtype=np.int64),
+            )
         if self.lighterglue is None:
             from modules.lighterglue import LighterGlue
 
@@ -409,6 +415,9 @@ class XFeat(nn.Module):
         feats2: Float[Tensor, "M 64"],
         min_cossim: float = 0.82,
     ) -> tuple[Int[Tensor, "K"], Int[Tensor, "K"]]:  # noqa: F821 -- "K" is a jaxtyping axis
+        if len(feats1) == 0 or len(feats2) == 0:
+            empty = torch.empty(0, dtype=torch.long, device=feats1.device)
+            return empty, empty.clone()
         cossim = feats1 @ feats2.t()
         cossim_t = feats2 @ feats1.t()
 

@@ -1,0 +1,12 @@
+name: amuse
+lr: 0.0003
+weight_decay: 0.01
+beta1: 0.4
+rho: 0.3
+r: 0.0
+weight_lr_power: 2.0
+weight_decay_at_y: 0.0
+warmup_steps: 50
+momentum: 0.95
+beta2: 0.999
+eps: 1.0e-10

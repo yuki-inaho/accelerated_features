@@ -10,7 +10,7 @@ dependencies = [
     "jaxtyping>=0.3",
     "kornia==0.7.2",
     "numpy>=1.26",
-    "opencv-contrib-python-headless>=4.10,<5",
+    "opencv-contrib-python>=4.10,<5",
     "torch>=2.2",
     "tqdm>=4.66",
 ]
@@ -31,7 +31,9 @@ eval = [
 train = [
     "gdown>=5.0",
     "h5py>=3.10",
+    "hydra-core>=1.3,<1.4",
     "matplotlib>=3.8",
+    "omegaconf>=2.3,<2.4",
     "pandas>=2.0",
     "tensorboard>=2.16",
     "torchvision>=0.17",
@@ -95,8 +97,12 @@ include = [
     "modules/interpolator.py",
     "modules/lighterglue.py",
     "modules/model.py",
+    "modules/raco.py",
     "modules/typecheck.py",
+    "modules/utils.py",
     "modules/xfeat.py",
+    "xfeat_training",
+    "scripts",
     "tests",
 ]
 exclude = ["notebooks", "third_party"]

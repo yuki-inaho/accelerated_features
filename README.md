@@ -82,21 +82,18 @@ If you use conda, just create a new env with:
 git clone https://github.com/verlab/accelerated_features.git
 cd accelerated_features
 
-#Create conda env
-conda create -n xfeat python=3.8
+#Create conda env (Python 3.10-3.12)
+conda create -n xfeat python=3.12
 conda activate xfeat
 ```
 
-Then, install [pytorch (>=1.10)](https://pytorch.org/get-started/previous-versions/) and then the rest of depencencies in case you want to run the demos:
+Then, install [pytorch (>=2.2)](https://pytorch.org/get-started/locally/) for your platform and GPU, and then the remaining inference and demo dependencies:
 ```bash
+#CPU only example; for GPU pick the build that matches your CUDA version on the pytorch website.
+pip install torch --index-url https://download.pytorch.org/whl/cpu
 
-#CPU only, for GPU check in pytorch website the most suitable version to your gpu.
-pip install torch==1.10.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
-# CPU only for MacOS
-# pip install torch==1.10.1 -f https://download.pytorch.org/whl/cpu/torch_stable.html
-
-#Install dependencies for the demo
-pip install opencv-contrib-python tqdm
+#Inference/demo dependencies (GUI OpenCV, typed inference API, LighterGlue)
+pip install -r requirements.txt
 ```
 
 ### Quickstart with uv (recommended)
@@ -113,7 +110,7 @@ uv sync
 uv sync --all-groups   # recommended if you plan to run benchmarks or training
 ```
 
-`uv sync` is exclusive: it removes packages from any group you leave out. Opt into only what you need with `--group eval` (poselib, gdown, h5py, matplotlib, pandas) or `--group train` (torchvision, tensorboard, ...).
+`uv sync` is exclusive: it removes packages from any group you leave out. Opt into only what you need with `--group eval` (poselib, gdown, h5py, matplotlib, pandas) or `--group train` (torchvision, tensorboard, hydra-core, omegaconf, ...).
 
 The pretrained weights are already included in `weights/`, so inference works right away. CUDA is used automatically when available; pass `device="cpu"` (or `--device cpu`) to force CPU execution.
 
@@ -169,7 +166,7 @@ uv run inference.py path/to/image1.jpg path/to/image2.jpg --method xfeat-star
 uv run inference.py path/to/image1.jpg path/to/image2.jpg --method lighterglue
 ```
 
-It prints the number of matches/inliers and an estimated homography, and optionally saves a match visualization. Useful flags: `--device cpu|cuda|mps`, `--weights path/to/checkpoint.pt`, `--top-k`, `--max-size`, `--ransac-thr`. Running `uv run inference.py` without arguments matches the sample pair in `assets/`.
+It prints the number of matches/inliers and an estimated homography, and optionally saves a match visualization. Useful flags: `--device cpu|cuda|mps`, `--weights path/to/checkpoint.pt`, `--lg-weights path/to/lighterglue_bundle.pt` (a fine-tuned LighterGlue bundle with its own XFeat extractor), `--top-k`, `--max-size`, `--ransac-thr`. Running `uv run inference.py` without arguments matches the sample pair in `assets/`.
 
 The public inference API (`modules/xfeat.py`, `modules/lighterglue.py`, `inference.py`) validates its inputs at runtime through [beartype](https://github.com/beartype/beartype) and [jaxtyping](https://github.com/patrick-kidder/jaxtyping) annotations, so malformed images fail fast with a clear error instead of a cryptic tensor shape mismatch.
 
@@ -191,6 +188,65 @@ To reproduce the training setup from the paper, please follow the steps:
 ```bash
 python3 -m modules.training.train --training_type xfeat_default  --megadepth_root_path <path_to>/MegaDepth --synthetic_root_path <path_to>/coco_20k --ckpt_save_path /path/to/ckpts
 ```
+
+### Fine-tuning on posed RGB-D sequences
+
+The `xfeat_training` package fine-tunes XFeat and LighterGlue on RGB-D sequences with known camera poses. It uses the [AMUSE](https://github.com/kjeiun/amuse) optimizer (vendored unmodified in `third_party/amuse/`), [Hydra](https://hydra.cc/) configs in `configs/` and TensorBoard logging, and was run on a single RTX 2070 (8 GB) in fp32.
+
+Expected data layout (`colmap_rgbd_v1`): each subset directory holds `dataset.json` and `scenes/scene_000000/{cameras.npz,sequences.npz,overlap.npz,rgb/,depth/}` with `frame_{id:06d}.png` images, uint16 depth in millimetres (0 = invalid) and OpenCV world-to-camera extrinsics. Run everything from the repository root after `uv sync --all-groups`; the examples write to the git-ignored `temp/` directory, which is also where `configs/train.yaml` looks for pairs and caches by default.
+
+1. Mine pairs once with the dedicated config `configs/pair_mining/default.yaml` (chunk splits with guard chunks, depth-reprojection overlap, pairs beyond adjacent frames). Training only reads the resulting files.
+   ```bash
+   export L76_DATA_ROOT=/path/to/dataset   # directory holding the colmap_rgbd_* subsets
+   uv run python -m scripts.mine_pairs --cfg job --resolve   # print the resolved config
+   uv run python -m scripts.mine_pairs output_dir=temp/l76_run/pairs_v1   # optional: archive_path=/path/to/dataset.tar.zst records the source archive hash
+   ```
+2. Cache frozen XFeat features for the mined frames, fix the evaluation anchors/ground truth, and measure the pretrained baseline on val.
+   ```bash
+   uv run python -m scripts.cache_features --pairs temp/l76_run/pairs_v1 --weights weights/xfeat.pt --output temp/l76_run/cache_official
+   uv run python -m scripts.evaluate_l76 --mode prepare --pairs temp/l76_run/pairs_v1 --cache temp/l76_run/cache_official --output temp/l76_run/eval_official_5pct
+   uv run python -m scripts.evaluate_l76 --mode baseline --split val --output temp/l76_run/baseline_val
+   ```
+3. Train in stages with `python -m xfeat_training.train` and Hydra overrides. `experiment=smoke` is a 12-update check on 8 pairs.
+   ```bash
+   # A: LighterGlue on the frozen official XFeat
+   uv run python -m xfeat_training.train experiment=lg_a run_dir=temp/l76_run/stage_a
+   # B: XFeat descriptor, reliability, keypoint and fine heads
+   uv run python -m xfeat_training.train experiment=xfeat_b run_dir=temp/l76_run/stage_b
+   # C: LighterGlue from Stage A on top of the frozen Stage B extractor
+   uv run python -m scripts.cache_features --pairs temp/l76_run/pairs_v1 --weights temp/l76_run/stage_b/exports/best_xfeat.pt --output temp/l76_run/cache_stage_b
+   uv run python -m xfeat_training.train experiment=lg_c run_dir=temp/l76_run/stage_c cache_dir=temp/l76_run/cache_stage_b xfeat_weights=temp/l76_run/stage_b/exports/best_xfeat.pt lg_weights=temp/l76_run/stage_a/exports/best_lighterglue.pt
+   # Optional: AdamW control with the same initial weights and data order as Stage A
+   uv run python -m xfeat_training.train experiment=lg_a optimizer=adamw run_dir=temp/l76_run/adamw_control
+   ```
+   Each run validates on the fixed val pairs every `eval_every` updates and writes `resolved.yaml`, `metrics.jsonl`, TensorBoard events, checkpoints and inference exports (`exports/{best,last}_xfeat.pt`, plus `exports/{best,last}_lighterglue.pt` for LighterGlue runs). Checkpoints keep the top `checkpoint_keep_best` (default 3) by val plus the latest; `null` keeps all. `run_dir` must not exist yet, and Hydra multirun is rejected.
+4. Stop and resume. `stop_after_steps` ends the process at that update after saving a checkpoint; resume into a new `run_dir` with the same settings. Configuration, data/cache/weight hashes and the runtime source are checked before anything is written, and the resumed run reproduces the uninterrupted one on the same machine.
+   ```bash
+   uv run python -m xfeat_training.train experiment=smoke task=lighterglue run_dir=temp/l76_run/smoke_lg_cut max_steps=12 stop_after_steps=5 save_every=5 optimizer.warmup_steps=3
+   uv run python -m xfeat_training.train experiment=smoke task=lighterglue run_dir=temp/l76_run/smoke_lg_resume max_steps=12 save_every=5 optimizer.warmup_steps=3 resume_from=temp/l76_run/smoke_lg_cut/checkpoints/step_000005.pt
+   ```
+   To apply checkpoint retention to a run that has already exited: `uv run python -m scripts.prune_checkpoints temp/l76_run/stage_a --keep-best 3 --training-exited`.
+5. Monitor with `uv run tensorboard --logdir temp/l76_run --host 127.0.0.1 --port 6006`.
+6. Use the exports. The LighterGlue bundle contains its XFeat extractor; if `--weights` is also given it must be the same extractor.
+   ```bash
+   uv run inference.py image1.png image2.png --method lighterglue --lg-weights temp/l76_run/stage_c/exports/best_lighterglue.pt
+   uv run inference.py image1.png image2.png --weights temp/l76_run/stage_b/exports/best_xfeat.pt
+   ```
+7. Compare candidates chosen on val once on the test split. `selection.json` lists each candidate's `name`, `xfeat_weights`, `lg_weights` and their SHA-256 `file_hashes`, together with `"selected_on": "val"` and the `evaluation_hash` of the evaluation cache.
+   ```bash
+   uv run python -m scripts.evaluate_l76 --mode compare --split test --selection temp/l76_run/selection.json --output temp/l76_run/comparison_test
+   ```
+
+Fine-tuning on a narrow domain can improve matching there while degrading general scenes considerably. Keep the pretrained weights for general use and evaluate the fine-tuned weights on your own target domain.
+
+## Optional ranking and covariance heads
+
+The [XFeat ranking/covariance extension](docs/raco.md) adds independently trainable
+heads, a Hydra training entry point, portable inference bundles, and NPZ extraction.
+
+Validation-selected fine-tuned weights are available in the
+[RGB-D + RaCo models release](https://github.com/yuki-inaho/accelerated_features/releases/tag/rgbd-raco-v1).
+See [model formats, loading examples, and limitations](docs/pretrained_models.md).
 
 ### Evaluation
 ----
@@ -256,9 +312,9 @@ Metrics (AUC @ 5 / 10 / 20)
 The typed inference path uses [jaxtyping](https://github.com/patrick-kidder/jaxtyping) shape annotations with [beartype](https://github.com/beartype/beartype) runtime validation (`modules/typecheck.py`). Quality gates are pinned in `pyproject.toml`:
 
 ```bash
-uv run pytest          # end-to-end tests: pretrained weight loading, sparse/semi-dense/LighterGlue matching, homography verification
+uv run pytest          # end-to-end inference tests, regression tests and RGB-D training tests (geometry, mining, losses, resume, retention)
 uv run ruff check .    # lint; legacy research scripts keep the upstream style through documented per-file ignores
-uv run ty check        # static type checking of the inference path and tests
+uv run ty check        # static type checking of the inference path, xfeat_training, scripts and tests
 ```
 
 Set `XFEAT_TEST_DEVICE=cpu` (or `cuda`, `mps`) to pin the device used by the test suite.

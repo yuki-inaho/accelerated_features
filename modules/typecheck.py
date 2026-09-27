@@ -28,14 +28,14 @@ matching what static type checkers report.
 """
 
 ImageInput: TypeAlias = (
-    Float[Tensor, "B C H W"]
-    | UInt8[Tensor, "B C H W"]
-    | Float[NDArray, "B H W C"]
-    | UInt8[NDArray, "B H W C"]
-    | Float[NDArray, "H W C"]
-    | UInt8[NDArray, "H W C"]
-    | Float[NDArray, "H W"]
-    | UInt8[NDArray, "H W"]
+    Float[Tensor, "B C _H _W"]
+    | UInt8[Tensor, "B C _H _W"]
+    | Float[NDArray, "B _H _W C"]
+    | UInt8[NDArray, "B _H _W C"]
+    | Float[NDArray, "_H _W C"]
+    | UInt8[NDArray, "_H _W C"]
+    | Float[NDArray, "_H _W"]
+    | UInt8[NDArray, "_H _W"]
 )
 """Image accepted by the sparse/dense extraction API.
 
@@ -43,6 +43,9 @@ Float images are expected in [0, 1] with the layout used by torch models
 ``(B, C, H, W)`` or by OpenCV/NumPy ``(H, W, C)``. Raw ``uint8`` images are
 also accepted: XFeat normalizes each sample internally, so pixel scale does
 not change the produced features.
+
+Spatial axes are anonymous: two images in a matching call may have different
+heights and widths. Batch, channel, rank and dtype checks still apply.
 """
 
 Keypoints: TypeAlias = Float[Tensor, "N 2"]

@@ -136,6 +136,10 @@ class XFeatModel(nn.Module):
         self,
         x: Float[Tensor, "B C H W"],
     ) -> tuple[Float[Tensor, "B 64 H2 W2"], Float[Tensor, "B 65 H2 W2"], Float[Tensor, "B 1 H2 W2"]]:
+        feats, keypoints, heatmap, _ = self.forward_with_features(x)
+        return feats, keypoints, heatmap
+
+    def forward_with_features(self, x: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         """
         input:
             x -> torch.Tensor(B, C, H, W) grayscale or rgb images
@@ -163,6 +167,7 @@ class XFeatModel(nn.Module):
 
         # heads
         heatmap = self.heatmap_head(feats)  # Reliability map
-        keypoints = self.keypoint_head(self._unfold2d(x, ws=8))  # Keypoint map logits
+        detector_features = self.keypoint_head[:-1](self._unfold2d(x, ws=8))
+        keypoints = self.keypoint_head[-1](detector_features)
 
-        return feats, keypoints, heatmap
+        return feats, keypoints, heatmap, detector_features
