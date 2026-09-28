@@ -272,14 +272,7 @@ def dense_fields(model: XFeatRaCo, image: torch.Tensor) -> dict[str, np.ndarray]
     covariance = lower @ lower.mT + model.heads.sigma_min**2 * torch.eye(2, device=z.device)
     probability = F.pixel_shuffle(logits.softmax(1)[:, :64], 8)
     score = probability * F.interpolate(reliability, size=image.shape[-2:], mode="bilinear", align_corners=False)
-    # Preserve the legacy effective score; a probability map is a different quantity.
-    result = {
-        "rank_correction": correction[0, 0],
-        "detector": score[0, 0],  # Backward-compatible probability x reliability.
-        "detector_probability": probability[0, 0],
-        "reliability": F.interpolate(reliability, size=image.shape[-2:], mode="bilinear", align_corners=False)[0, 0],
-        "covariance": covariance,
-    }
+    result = {"rank_correction": correction[0, 0], "detector": score[0, 0], "covariance": covariance}
     if not all(torch.isfinite(value).all() for value in result.values()):
         raise ValueError("Nonfinite dense output")
     return {key: value.cpu().numpy() for key, value in result.items()}

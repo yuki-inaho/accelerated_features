@@ -17,7 +17,9 @@ from torch import Tensor, nn
 
 from modules.model import XFeatModel
 from modules.utils import load_pretrained_weights, resolve_device
-from modules.xfeat import DEFAULT_WEIGHTS
+# The bundle reader does not need the optional runtime-typed XFeat API.
+# Keep the identical default path without importing that API's dependencies.
+DEFAULT_WEIGHTS = Path(__file__).resolve().parent.parent / "weights" / "xfeat.pt"
 
 
 def finite(value: Tensor, name: str) -> None:

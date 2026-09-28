@@ -5,11 +5,15 @@ https://www.verlab.dcc.ufmg.br/descriptors/xfeat_cvpr24/
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from jaxtyping import Float
 from torch import Tensor
+
+if TYPE_CHECKING:
+    from jaxtyping import Float
 
 
 class BasicLayer(nn.Module):
