@@ -1,0 +1,28 @@
+defaults:
+  - raco
+  - _self_
+
+seed: 20260928
+max_steps: 50000
+eval_every: 100
+save_every: 100
+image_size: [480, 640]
+auto_stop:
+  enabled: true
+  interval: 1000
+  window: 3
+
+distillation:
+  teacher_source: ???
+  teacher_weights: ???
+  direction: teacher_to_student
+  transform: identity
+  comparisons: 4096
+  rank_budget: 512
+  boundary_radius: 128
+  minimum_absolute_gain: 0.0001
+  minimum_relative_gain: 0.01
+  geometry:
+    enabled: false
+    ramp_steps: 1000
+    final_kd_weight: 0.1

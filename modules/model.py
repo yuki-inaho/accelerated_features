@@ -152,6 +152,11 @@ class XFeatModel(nn.Module):
             keypoints ->  torch.Tensor(B, 65, H/8, W/8) keypoint logit map
             heatmap   ->  torch.Tensor(B,  1, H/8, W/8) reliability map
         """
+        outputs = self.forward_with_stages(x)
+        return outputs[:4]
+
+    def forward_with_stages(self, x: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor, Tensor]:
+        """Return inference outputs plus raw block3/H8 and block5/H32 features."""
         # dont backprop through normalization
         with torch.no_grad():
             x = x.mean(dim=1, keepdim=True)
@@ -163,6 +168,7 @@ class XFeatModel(nn.Module):
         x3 = self.block3(x2)
         x4 = self.block4(x3)
         x5 = self.block5(x4)
+        block3_features, block5_features = x3, x5
 
         # pyramid fusion
         x4 = F.interpolate(x4, (x3.shape[-2], x3.shape[-1]), mode="bilinear")
@@ -174,4 +180,4 @@ class XFeatModel(nn.Module):
         detector_features = self.keypoint_head[:-1](self._unfold2d(x, ws=8))
         keypoints = self.keypoint_head[-1](detector_features)
 
-        return feats, keypoints, heatmap, detector_features
+        return feats, keypoints, heatmap, detector_features, block3_features, block5_features

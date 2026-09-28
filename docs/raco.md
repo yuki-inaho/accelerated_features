@@ -5,6 +5,12 @@ positive definite 2×2 positional error matrix, inspired by
 [RaCo](https://github.com/cvg/RaCo). This extension uses XFeat features and its own
 training objective; RaCo checkpoints are not compatible.
 
+For transferring official RaCo outputs through a frozen teacher, see
+[the distillation formulation and experiment report](raco_distillation.md).
+The follow-up [multiscale and local distillation study](raco_multiscale.md)
+reports a selected step-3800 model, including its worse covariance calibration
+on the locked RGB-D test pairs.
+
 ## Outputs and coordinates
 
 `modules.raco.XFeatRaCo.extract()` returns one dictionary per image:

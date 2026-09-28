@@ -155,7 +155,7 @@ class RacoTask:
             "base_hash": self.base_hash,
             "coordinate_convention": "integer pixel centers; half-pixel resize; original pixel^2",
         }
-        self.identities = {
+        self.identities: dict[str, Any] = {
             "pair_hash": self.pair_manifest["content_hash"],
             "evaluation_hash": json_hash(validation_identity),
             "evaluation": validation_identity,
@@ -230,11 +230,21 @@ class RacoTask:
         if overlap < self.config["augmentation"]["minimum_overlap"]:
             self.skip_reason = "insufficient_shared_support"
             return None
-        c0, c1 = self.model.candidates(a, mask0)[0], self.model.candidates(b, mask1)[0]
+        c0, c1 = self._make_candidates(a, mask0), self._make_candidates(b, mask1)
         if not len(c0["keypoints"]) or not len(c1["keypoints"]):
             self.skip_reason = "empty_candidates"
             return None
         return c0, c1, h, overlap
+
+    def _make_candidates(self, image: Tensor, support: Tensor) -> dict[str, Tensor]:
+        return self.model.candidates(image, support)[0]
+
+    def _evaluation_extras(self, a: dict[str, Tensor], b: dict[str, Tensor], h: Tensor) -> dict[str, Any]:
+        return {}
+
+    def _finalize_evaluation_metrics(self, metrics: dict[str, Any]) -> dict[str, Any]:
+        """Allow task-specific aggregates before publishing validation metrics."""
+        return metrics
 
     def _matches(self, a: dict[str, Tensor], b: dict[str, Tensor], h: Tensor, threshold: float) -> Tensor:
         x, y = a["keypoints"].float(), b["keypoints"].float()
@@ -361,6 +371,7 @@ class RacoTask:
                 }.items():
                     arrays[f"{index}_{side}_{name}"] = value.cpu().numpy()
             arrays[f"{index}_homography"] = h.cpu().numpy()
+            row.update(self._evaluation_extras(a, b, h))
             rows.append(row)
         usable = [row for row in rows if "skip" not in row]
         cov_rows = [row for row in usable if "covariance_nll" in row]
@@ -380,6 +391,7 @@ class RacoTask:
             "rows": rows,
             "interpretation": "conditional on fixed geometric pseudo-correspondence selection; not calibrated uncertainty",
         }
+        metrics = self._finalize_evaluation_metrics(metrics)
         output.mkdir(parents=True, exist_ok=False)
         atomic_json(output / "metrics.json", metrics)
         with (output / "predictions.npz").open("xb") as stream:

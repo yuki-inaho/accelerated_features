@@ -17,6 +17,7 @@ from torch import Tensor, nn
 
 from modules.model import XFeatModel
 from modules.utils import load_pretrained_weights, resolve_device
+
 # The bundle reader does not need the optional runtime-typed XFeat API.
 # Keep the identical default path without importing that API's dependencies.
 DEFAULT_WEIGHTS = Path(__file__).resolve().parent.parent / "weights" / "xfeat.pt"
@@ -263,6 +264,77 @@ class XFeatRaCo(nn.Module):
                 }
             )
         return result
+
+    def configure_multiscale_training(self) -> tuple[str, ...]:
+        """Enable gradients only for the planned feature stages and sparse heads."""
+        trainable_prefixes = (
+            "net.block3.",
+            "net.block5.",
+            "net.block_fusion.",
+            "heads.ranker.",
+            "heads.covariance_head.",
+        )
+        batch_norm_prefixes = tuple(
+            f"net.{module_name}."
+            for module_name, module in self.net.named_modules()
+            if isinstance(module, nn.modules.batchnorm._BatchNorm)
+        )
+        names = []
+        for name, parameter in self.named_parameters():
+            enabled = name.startswith(trainable_prefixes) and not name.startswith(batch_norm_prefixes)
+            parameter.requires_grad_(enabled)
+            if enabled:
+                names.append(name)
+        if not names:
+            raise RuntimeError("Multiscale training found no trainable parameters")
+        self.train(True)
+        return tuple(sorted(names))
+
+    @torch.enable_grad()
+    def training_candidates(
+        self,
+        image: Tensor,
+        valid_mask: Tensor | None = None,
+        *,
+        include_feature_maps: bool = False,
+    ) -> list[dict[str, Tensor]]:
+        """Reuse discrete inference candidates and attach differentiable features."""
+        if type(include_feature_maps) is not bool:
+            raise TypeError("include_feature_maps must be a bool")
+        candidates = self.candidates(image, valid_mask)
+        device = next(self.parameters()).device
+        image = image.to(device=device, dtype=torch.float32)
+        image, transform = resize_input(image)
+        if candidates and not torch.equal(transform, candidates[0]["transform"]):
+            raise RuntimeError("Training and inference candidate transforms differ")
+
+        self.net.eval()
+        features, _logits, _reliability, detector, block3, block5 = self.net.forward_with_stages(image)
+        height, width = image.shape[-2:]
+        finite(features, "training descriptor map")
+        finite(detector, "training detector map")
+        finite(block3, "training block3 map")
+        finite(block5, "training block5 map")
+        descriptor_map = F.normalize(features, dim=1)
+
+        for index, candidate in enumerate(candidates):
+            points = candidate["keypoints"]
+            z = torch.cat((features[index : index + 1], detector[index : index + 1].detach()), 1)
+            candidate["z"] = z
+            if include_feature_maps:
+                candidate["block3_map"] = block3[index : index + 1]
+                candidate["block5_map"] = block5[index : index + 1]
+            if len(points):
+                candidate["descriptors"] = F.normalize(
+                    sample_map(descriptor_map[index : index + 1], points, height, width, "bicubic"), dim=-1
+                )
+                candidate["block3_features"] = sample_map(block3[index : index + 1], points, height, width)
+                candidate["block5_features"] = sample_map(block5[index : index + 1], points, height, width)
+            else:
+                candidate["descriptors"] = features.new_empty((0, features.shape[1]))
+                candidate["block3_features"] = block3.new_empty((0, block3.shape[1]))
+                candidate["block5_features"] = block5.new_empty((0, block5.shape[1]))
+        return candidates
 
     def predict(
         self, candidates: dict[str, Tensor], *, top_k: int = 4096, ranking: bool = True, covariance: bool = True
