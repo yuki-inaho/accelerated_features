@@ -2,7 +2,7 @@
 
 公式 RaCo を凍結教師とし、XFeat 生徒の推論経路へ順位と中間特徴の情報を移す実験。単一 seed、固定 16 枚の合成 homography validation で A/B/C を各 1,000 成功更新比較し、C だけを継続した。ユーザー指示で学習を 4,505 更新で停止し、**validation 指標 Q が最大の 3,800 更新モデル**を最終モデルとした。
 
-数値の正本は [集計 JSON](raco_multiscale_results.json)。[Notebook](../notebooks/raco_distillation.ipynb) で表と曲線を再描画できる。元画像、系列名、個別フレーム ID、個人のパスは公開成果物へ含めていない。
+数値の正本は [集計 JSON](raco_multiscale_results.json)。[Notebook](../notebooks/raco_distillation.ipynb) で表と曲線を再描画できる。推論重みは [main の Release](https://github.com/yuki-inaho/accelerated_features/releases/tag/raco-local-kd-v1) にある。元画像、系列名、個別フレーム ID、個人のパスは公開成果物へ含めていない。
 
 ## 設計と選定
 

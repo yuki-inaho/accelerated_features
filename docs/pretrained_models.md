@@ -1,5 +1,21 @@
 # Fine-tuned inference weights
 
+## Official RaCo teacher distillation: local KD
+
+Download the validation Q-best step-3800 inference bundle from the
+[local KD release](https://github.com/yuki-inaho/accelerated_features/releases/tag/raco-local-kd-v1):
+`xfeat-raco-local-kd-step3800-best.pt`. Load it with
+`XFeatRaCo.from_bundle()` using the code at that tag or a compatible later revision.
+The release includes `MODEL_CARD.md` and `SHA256SUMS`.
+
+The locked RGB-D test improved rank utility and descriptor TP@512, but covariance
+NLL and all reported coverage levels worsened. The original 90% validation
+coverage-deviation gate was waived by explicit user decision. See the
+[multiscale experiment report](raco_multiscale.md) and
+[Notebook](../notebooks/raco_distillation.ipynb) before using the covariance output.
+
+## RGB-D + RaCo heads v1
+
 Download the assets from the [RGB-D + RaCo models release](https://github.com/yuki-inaho/accelerated_features/releases/tag/rgbd-raco-v1).
 
 These are validation-selected, domain-fine-tuned inference weights for this fork.
