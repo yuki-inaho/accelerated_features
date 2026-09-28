@@ -133,7 +133,7 @@ def rank_semantics(output: Path) -> Path:
     return path
 
 
-def verify_baseline(root: Path, output: Path) -> dict:
+def verify_baseline(root: Path, output: Path, *, weights: Path | None = None) -> dict:
     """Compare the uploaded helper's original numeric paths to the new ones."""
     source = root / "audit/baseline/scripts/raco_visualization.py"
     spec = importlib.util.spec_from_file_location("raco_viz_original_snapshot", source)
@@ -142,7 +142,8 @@ def verify_baseline(root: Path, output: Path) -> dict:
     spec.loader.exec_module(old)
     torch.set_num_threads(4)
     torch.use_deterministic_algorithms(True)
-    data, weights, _ = resolve_visualization_paths(root)
+    data, default_weights, _ = resolve_visualization_paths(root)
+    weights = default_weights if weights is None else weights
     model = XFeatRaCo.from_bundle(weights, device="cpu").eval()
     rows = []
     for frame in load_paired_samples(data):
@@ -170,7 +171,7 @@ def verify_baseline(root: Path, output: Path) -> dict:
     return result
 
 
-def build_evidence(root: Path, output: Path, verify: bool = True) -> list[Path]:
+def build_evidence(root: Path, output: Path, verify: bool = True, *, weights: Path | None = None) -> list[Path]:
     paths = [
         before_after(output, "scene_01_b", "freiburg3_nostructure_texture_far"),
         before_after(output, "scene_06_b", "freiburg3_structure_texture_far"),
@@ -178,7 +179,7 @@ def build_evidence(root: Path, output: Path, verify: bool = True) -> list[Path]:
         determinant_sensitivity(output), rank_semantics(output),
     ]
     if verify:
-        verify_baseline(root, output)
+        verify_baseline(root, output, weights=weights)
     return paths
 
 

@@ -37,7 +37,7 @@ DETECTOR_CMAP = LinearSegmentedColormap.from_list(
 )
 PAPER_URL = "https://arxiv.org/html/2602.15755v1#A4"
 
-def resolve_visualization_paths(root: Path) -> tuple[Path, Path, Path]:
+def resolve_visualization_paths(root: Path, *, model_name: str = MODEL_NAME) -> tuple[Path, Path, Path]:
     """Resolve local inputs without embedding machine-specific paths in notebooks."""
     root = Path(root).expanduser()
     downloads = Path.home() / "Downloads"
@@ -57,8 +57,8 @@ def resolve_visualization_paths(root: Path) -> tuple[Path, Path, Path]:
         downloads / "tum_rgbd_pairs_10",
     ])
     weights = choose("RACO_WEIGHTS", [
-        root / "weights" / MODEL_NAME,
-        downloads / MODEL_NAME,
+        root / "weights" / model_name,
+        downloads / model_name,
     ], file=True)
     output = Path(os.environ.get(
         "RACO_OUTPUT_DIR", str(root / "outputs" / "raco-paper-visualization")
@@ -346,10 +346,10 @@ def _array_digest(arrays: dict[str, np.ndarray]) -> str:
 
 
 def run(data: Path, weights: Path, output: Path, *, device: str = "cpu", config: DisplayConfig = DisplayConfig(),
-        save_all_fields: bool = False) -> dict[str, Any]:
+        save_all_fields: bool = False, expected_model_sha256: str = MODEL_SHA) -> dict[str, Any]:
     """Offline inference of all supplied views, dense/sparse assertions + figures."""
-    if file_sha(Path(weights)) != MODEL_SHA:
-        raise ValueError("This evidence run requires the supplied released checkpoint SHA-256")
+    if file_sha(Path(weights)) != expected_model_sha256:
+        raise ValueError("Model checkpoint SHA-256 does not match the selected release")
     torch.manual_seed(20260927)
     torch.set_num_threads(4)
     torch.use_deterministic_algorithms(True)
@@ -422,7 +422,7 @@ def run(data: Path, weights: Path, output: Path, *, device: str = "cpu", config:
     assert state_hash(model.state_dict()) == initial_state, "Model state changed during visualization"
     metadata = {
         "paper": PAPER_URL, "paper_version": "2602.15755v1", "model_kind": "xfeat_raco_v1, NOT original RaCo",
-        "model_file": Path(weights).name, "model_sha256": MODEL_SHA, "model_state_sha256_before_and_after": initial_state,
+        "model_file": Path(weights).name, "model_sha256": expected_model_sha256, "model_state_sha256_before_and_after": initial_state,
         "environment": {"python": platform.python_version(), "torch": torch.__version__, "numpy": np.__version__,
                         "opencv": cv2.__version__, "matplotlib": matplotlib.__version__, "device": device},
         "seed": 20260927, "threads": 4, "deterministic_algorithms": True,
