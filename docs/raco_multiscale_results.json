@@ -1,0 +1,864 @@
+{
+  "schema_version": 1,
+  "experiment": "Official RaCo teacher to XFeat student: multiscale/local distillation",
+  "selection": {
+    "split": "validation",
+    "criterion": "maximum Q across A/B/C and C continuation through user stop at 4505",
+    "q_formula": "min((U-U0)/U0,(N0-N)/N0)",
+    "selected_variant": "C",
+    "selected_step": 3800,
+    "selected_q": 0.016681719229084718,
+    "baseline_bundle_sha256": "fd02f809283132b905b7ad151fcabfc0c8d8ad613ed12d3fda589764e48e2575",
+    "selected_bundle_sha256": "7576862b55382f61e31fa14d68e1ef2e2be5db93a570ad7978de46427a6cf717",
+    "selected_validation_sha256": "4da05068345ba02b663d15b911a3507d6a8277ff9cd2c70b0a2c563591d9ae99",
+    "strict_coverage_gate_met": false,
+    "user_exception": "Q-max step 3800 selected despite worse validation 90% nominal coverage deviation",
+    "test_reselection": false
+  },
+  "protocol": {
+    "seed": 20260928,
+    "resolution": [
+      480,
+      640
+    ],
+    "validation_frames": 16,
+    "validation_subsets": 2,
+    "test_pairs": 144,
+    "test_capture_series": 2,
+    "scene_generalization_claim": false,
+    "first_stage_updates_per_variant": 1000,
+    "c_last_successful_update": 4505,
+    "c_stop": "user-directed interruption; not plateau or 5000 completion",
+    "inference_bundle": "student only; training auxiliary head omitted",
+    "output_teacher_kd": {
+      "ranking": "enabled after headroom check",
+      "covariance": "disabled after headroom check"
+    },
+    "variants": {
+      "A": "geometry losses and descriptor retention",
+      "B": "A plus two-scale feature alignment",
+      "C": "A plus one-stage local contrastive head"
+    },
+    "conditional_branches": {
+      "BC": "skipped: B did not exceed A",
+      "SSKD": "skipped: BC gate failed"
+    }
+  },
+  "validation": {
+    "description": "fixed 16-frame synthetic homography; conditional pseudo-correspondence NLL; equal frame means",
+    "baseline": {
+      "rank_utility": 0.32643890380859375,
+      "covariance_nll": 3.494986966252327,
+      "descriptor_tp512": 1264,
+      "coverage50": 0.5462352950125933,
+      "coverage90": 0.8977931924164295,
+      "coverage95": 0.9439087845385075
+    },
+    "first_1000": {
+      "A": {
+        "best_step": 1000,
+        "best_q": 0.008210494756155703
+      },
+      "B": {
+        "best_step": 1000,
+        "best_q": 0.003149069451885578
+      },
+      "C": {
+        "best_step": 1000,
+        "best_q": 0.010684096736375558
+      }
+    },
+    "selected": {
+      "rank_utility": 0.4016011555989583,
+      "covariance_nll": 3.4366845786571503,
+      "descriptor_tp512": 1646,
+      "coverage50": 0.5346090234816074,
+      "coverage90": 0.9065708965063095,
+      "coverage95": 0.9492913223803043
+    },
+    "curves": {
+      "A": [
+        {
+          "step": 0,
+          "q": 1.0722995166781887e-09,
+          "utility": 0.32643890380859375,
+          "nll": 3.494986966252327
+        },
+        {
+          "step": 100,
+          "q": 0.00038777379426203787,
+          "utility": 0.36708323160807294,
+          "nll": 3.4936317056417465
+        },
+        {
+          "step": 200,
+          "q": 0.0013057825447473407,
+          "utility": 0.36884307861328125,
+          "nll": 3.4904232770204544
+        },
+        {
+          "step": 300,
+          "q": -0.012979299801986971,
+          "utility": 0.3702799479166667,
+          "nll": 3.540349453687668
+        },
+        {
+          "step": 400,
+          "q": 0.0004016389607471629,
+          "utility": 0.378814697265625,
+          "nll": 3.493583247065544
+        },
+        {
+          "step": 500,
+          "q": -0.0197149951223119,
+          "utility": 0.3791147867838542,
+          "nll": 3.5638906210660934
+        },
+        {
+          "step": 600,
+          "q": 0.0043111810242567545,
+          "utility": 0.3846028645833333,
+          "nll": 3.479919448494911
+        },
+        {
+          "step": 700,
+          "q": 0.00048622415075281935,
+          "utility": 0.3820749918619792,
+          "nll": 3.4932876229286194
+        },
+        {
+          "step": 800,
+          "q": -0.0007781451562368191,
+          "utility": 0.3870798746744792,
+          "nll": 3.497706577181816
+        },
+        {
+          "step": 900,
+          "q": 0.006362714034295656,
+          "utility": 0.385589599609375,
+          "nll": 3.4727493673563004
+        },
+        {
+          "step": 1000,
+          "q": 0.008210494756155703,
+          "utility": 0.3859710693359375,
+          "nll": 3.4662913978099823
+        }
+      ],
+      "B": [
+        {
+          "step": 0,
+          "q": 1.0722995166781887e-09,
+          "utility": 0.32643890380859375,
+          "nll": 3.494986966252327
+        },
+        {
+          "step": 100,
+          "q": 0.0007705837075564516,
+          "utility": 0.36334228515625,
+          "nll": 3.4922937899827957
+        },
+        {
+          "step": 200,
+          "q": -0.0015372331762281031,
+          "utility": 0.36712646484375,
+          "nll": 3.5003595799207687
+        },
+        {
+          "step": 300,
+          "q": -0.020268599840104352,
+          "utility": 0.36716969807942706,
+          "nll": 3.5658254623413086
+        },
+        {
+          "step": 400,
+          "q": -0.0033701595807344663,
+          "utility": 0.37785085042317706,
+          "nll": 3.5067656338214874
+        },
+        {
+          "step": 500,
+          "q": -0.012776097515799684,
+          "utility": 0.37826792399088544,
+          "nll": 3.539639264345169
+        },
+        {
+          "step": 600,
+          "q": -0.0003095690409083419,
+          "utility": 0.3780161539713542,
+          "nll": 3.49606890976429
+        },
+        {
+          "step": 700,
+          "q": -0.0007264193875413897,
+          "utility": 0.38326772054036456,
+          "nll": 3.4975257962942123
+        },
+        {
+          "step": 800,
+          "q": -0.002566930703233804,
+          "utility": 0.38526153564453125,
+          "nll": 3.503958359360695
+        },
+        {
+          "step": 900,
+          "q": 0.0010882972611045896,
+          "utility": 0.38361867268880206,
+          "nll": 3.4911833852529526
+        },
+        {
+          "step": 1000,
+          "q": 0.003149069451885578,
+          "utility": 0.38527170817057294,
+          "nll": 3.4839810132980347
+        }
+      ],
+      "C": [
+        {
+          "step": 0,
+          "q": 1.0722995166781887e-09,
+          "utility": 0.32643890380859375,
+          "nll": 3.494986966252327
+        },
+        {
+          "step": 100,
+          "q": 0.00048009738438162486,
+          "utility": 0.35648854573567706,
+          "nll": 3.493309035897255
+        },
+        {
+          "step": 200,
+          "q": -0.00025176340523634785,
+          "utility": 0.36625925699869794,
+          "nll": 3.4958668798208237
+        },
+        {
+          "step": 300,
+          "q": -0.008870094224793984,
+          "utility": 0.37038421630859375,
+          "nll": 3.525987833738327
+        },
+        {
+          "step": 400,
+          "q": 0.0020692449991831937,
+          "utility": 0.3753153483072917,
+          "nll": 3.487754985690117
+        },
+        {
+          "step": 500,
+          "q": -0.006904173927861266,
+          "utility": 0.3763071695963542,
+          "nll": 3.5191169679164886
+        },
+        {
+          "step": 600,
+          "q": 0.0028062263499784835,
+          "utility": 0.37957509358723956,
+          "nll": 3.4851792454719543
+        },
+        {
+          "step": 700,
+          "q": -0.0016891147339463098,
+          "utility": 0.3794453938802083,
+          "nll": 3.500890403985977
+        },
+        {
+          "step": 800,
+          "q": 0.004908333961753717,
+          "utility": 0.3827718098958333,
+          "nll": 3.477832406759262
+        },
+        {
+          "step": 900,
+          "q": 0.009713437020046218,
+          "utility": 0.38247934977213544,
+          "nll": 3.4610386341810226
+        },
+        {
+          "step": 1000,
+          "q": 0.010684096736375558,
+          "utility": 0.3870747884114583,
+          "nll": 3.4576461911201477
+        },
+        {
+          "step": 1100,
+          "q": 0.010989070708909688,
+          "utility": 0.3804117838541667,
+          "nll": 3.456580311059952
+        },
+        {
+          "step": 1200,
+          "q": 0.005607876804890372,
+          "utility": 0.3870340983072917,
+          "nll": 3.4753875136375427
+        },
+        {
+          "step": 1300,
+          "q": 0.006873384488095117,
+          "utility": 0.3853251139322917,
+          "nll": 3.4709645807743073
+        },
+        {
+          "step": 1400,
+          "q": 0.01147973643910884,
+          "utility": 0.38907114664713544,
+          "nll": 3.45486544072628
+        },
+        {
+          "step": 1500,
+          "q": 0.001529505447875866,
+          "utility": 0.39041392008463544,
+          "nll": 3.4896413683891296
+        },
+        {
+          "step": 1600,
+          "q": 0.010408682173202243,
+          "utility": 0.3922119140625,
+          "nll": 3.4586087614297867
+        },
+        {
+          "step": 1700,
+          "q": 0.013405404264705129,
+          "utility": 0.3907903035481771,
+          "nll": 3.448135256767273
+        },
+        {
+          "step": 1800,
+          "q": 0.013986125359756314,
+          "utility": 0.3919423421223958,
+          "nll": 3.446105644106865
+        },
+        {
+          "step": 1900,
+          "q": 0.013775214518524407,
+          "utility": 0.3908233642578125,
+          "nll": 3.446842774748802
+        },
+        {
+          "step": 2000,
+          "q": 0.014837016812944926,
+          "utility": 0.39495595296223956,
+          "nll": 3.4431317895650864
+        },
+        {
+          "step": 2100,
+          "q": 0.010279589457692829,
+          "utility": 0.39370473225911456,
+          "nll": 3.459059938788414
+        },
+        {
+          "step": 2200,
+          "q": 0.012879973292341246,
+          "utility": 0.3961079915364583,
+          "nll": 3.449971631169319
+        },
+        {
+          "step": 2300,
+          "q": 0.006130753892037591,
+          "utility": 0.3946380615234375,
+          "nll": 3.4735600650310516
+        },
+        {
+          "step": 2400,
+          "q": 0.00980399975107652,
+          "utility": 0.39471435546875,
+          "nll": 3.460722118616104
+        },
+        {
+          "step": 2500,
+          "q": 0.005985638637890078,
+          "utility": 0.3940785725911458,
+          "nll": 3.4740672409534454
+        },
+        {
+          "step": 2600,
+          "q": 0.015095006119222574,
+          "utility": 0.39710235595703125,
+          "nll": 3.4422301203012466
+        },
+        {
+          "step": 2700,
+          "q": 0.013467614179891002,
+          "utility": 0.39873504638671875,
+          "nll": 3.4479178339242935
+        },
+        {
+          "step": 2800,
+          "q": 0.015970524018173206,
+          "utility": 0.40036773681640625,
+          "nll": 3.4391701966524124
+        },
+        {
+          "step": 2900,
+          "q": 0.015122600017590264,
+          "utility": 0.3952534993489583,
+          "nll": 3.442133679986
+        },
+        {
+          "step": 3000,
+          "q": 0.011679148401493767,
+          "utility": 0.39688364664713544,
+          "nll": 3.4541684985160828
+        },
+        {
+          "step": 3100,
+          "q": 0.011038263910295104,
+          "utility": 0.39805857340494794,
+          "nll": 3.456408381462097
+        },
+        {
+          "step": 3200,
+          "q": 0.01589364311963084,
+          "utility": 0.3991444905598958,
+          "nll": 3.43943889439106
+        },
+        {
+          "step": 3300,
+          "q": 0.015100275905746441,
+          "utility": 0.4009653727213542,
+          "nll": 3.442211702466011
+        },
+        {
+          "step": 3400,
+          "q": 0.014330818855960624,
+          "utility": 0.40183258056640625,
+          "nll": 3.444900944828987
+        },
+        {
+          "step": 3500,
+          "q": 0.01485521804164265,
+          "utility": 0.40206146240234375,
+          "nll": 3.44306817650795
+        },
+        {
+          "step": 3600,
+          "q": 0.01618230462999643,
+          "utility": 0.40217844645182294,
+          "nll": 3.4384300261735916
+        },
+        {
+          "step": 3700,
+          "q": 0.013938582164345603,
+          "utility": 0.3994089762369792,
+          "nll": 3.4462718069553375
+        },
+        {
+          "step": 3800,
+          "q": 0.016681719229084718,
+          "utility": 0.4016011555989583,
+          "nll": 3.4366845786571503
+        },
+        {
+          "step": 3900,
+          "q": 0.012514946776774217,
+          "utility": 0.4028676350911458,
+          "nll": 3.4512473940849304
+        },
+        {
+          "step": 4000,
+          "q": 0.015678276835909093,
+          "utility": 0.40289560953776044,
+          "nll": 3.4401915967464447
+        },
+        {
+          "step": 4100,
+          "q": 0.014834612153074812,
+          "utility": 0.40355173746744794,
+          "nll": 3.4431401938199997
+        },
+        {
+          "step": 4200,
+          "q": 0.01586872675033838,
+          "utility": 0.4031728108723958,
+          "nll": 3.4395259767770767
+        },
+        {
+          "step": 4300,
+          "q": 0.015569726055247566,
+          "utility": 0.4029541015625,
+          "nll": 3.44057098031044
+        },
+        {
+          "step": 4400,
+          "q": 0.015561800057555116,
+          "utility": 0.40239206949869794,
+          "nll": 3.4405986815690994
+        },
+        {
+          "step": 4500,
+          "q": 0.016010124161566143,
+          "utility": 0.40306345621744794,
+          "nll": 3.439031794667244
+        }
+      ]
+    },
+    "coverage90_nominal_deviation": {
+      "baseline": 0.0022068075835705026,
+      "selected": 0.006570896506309487
+    }
+  },
+  "test": {
+    "description": "mutual minimum symmetric RGB-D reprojection distance <=3 native pixels with bidirectional depth visibility",
+    "covariance_definition": "first-order Jacobian with source depth held fixed; conditional bidirectional Gaussian NLL and chi-square coverage",
+    "pair_sha256": "aa6d9ac22eda29993ef3f35012fb820ebd236bd5fdc4b4609da9bf753ffa472c",
+    "content_sha256": "479718a1a96e14788dc7e14ae5242eb094e04574689c9c46cf23688b287c5668",
+    "mean_definition": "Pair metrics averaged equally; inference time averages image forwards; frames can recur across pairs",
+    "baseline": {
+      "pairs": 144,
+      "covariance_pairs": 144,
+      "mean_rank_utility": 0.05083635118272569,
+      "descriptor_TP512": 3129,
+      "mean_nll": 3.5975990902019626,
+      "coverage50": 0.48670270614428346,
+      "coverage90": 0.8505284372154933,
+      "coverage95": 0.9039941586688953,
+      "mean_inference_s": 0.03125401287252316,
+      "peak_allocated_bytes": 36256256
+    },
+    "selected": {
+      "pairs": 144,
+      "covariance_pairs": 144,
+      "mean_rank_utility": 0.06059293393735532,
+      "descriptor_TP512": 3581,
+      "mean_nll": 3.718465210459641,
+      "coverage50": 0.4143942679165225,
+      "coverage90": 0.7781577731513274,
+      "coverage95": 0.847492161281705,
+      "mean_inference_s": 0.029930776597110607,
+      "peak_allocated_bytes": 36256256
+    },
+    "phase_residual": {
+      "definition": "8x8 source candidate phase; baseline/selected aggregate geometry equal within floating-point rounding",
+      "bins": [
+        {
+          "phase": 0,
+          "count": 732,
+          "mean_squared_residual": 3.7053264072291414
+        },
+        {
+          "phase": 1,
+          "count": 314,
+          "mean_squared_residual": 3.4297502594217586
+        },
+        {
+          "phase": 2,
+          "count": 473,
+          "mean_squared_residual": 3.0744205908024176
+        },
+        {
+          "phase": 3,
+          "count": 409,
+          "mean_squared_residual": 3.3181910450821546
+        },
+        {
+          "phase": 4,
+          "count": 639,
+          "mean_squared_residual": 3.8136946548360076
+        },
+        {
+          "phase": 5,
+          "count": 562,
+          "mean_squared_residual": 3.2570491318402226
+        },
+        {
+          "phase": 6,
+          "count": 314,
+          "mean_squared_residual": 3.8012381062475655
+        },
+        {
+          "phase": 7,
+          "count": 648,
+          "mean_squared_residual": 3.8173871042269485
+        },
+        {
+          "phase": 8,
+          "count": 351,
+          "mean_squared_residual": 3.2903210442173614
+        },
+        {
+          "phase": 9,
+          "count": 191,
+          "mean_squared_residual": 3.232449392497814
+        },
+        {
+          "phase": 10,
+          "count": 338,
+          "mean_squared_residual": 2.8776907113419514
+        },
+        {
+          "phase": 11,
+          "count": 243,
+          "mean_squared_residual": 3.137287366198567
+        },
+        {
+          "phase": 12,
+          "count": 343,
+          "mean_squared_residual": 2.586681122172819
+        },
+        {
+          "phase": 13,
+          "count": 299,
+          "mean_squared_residual": 2.8877264685239887
+        },
+        {
+          "phase": 14,
+          "count": 244,
+          "mean_squared_residual": 3.364312243367165
+        },
+        {
+          "phase": 15,
+          "count": 410,
+          "mean_squared_residual": 3.363945624246864
+        },
+        {
+          "phase": 16,
+          "count": 474,
+          "mean_squared_residual": 3.415925369652177
+        },
+        {
+          "phase": 17,
+          "count": 232,
+          "mean_squared_residual": 3.010795896722685
+        },
+        {
+          "phase": 18,
+          "count": 425,
+          "mean_squared_residual": 2.924215190797867
+        },
+        {
+          "phase": 19,
+          "count": 311,
+          "mean_squared_residual": 2.954050867629638
+        },
+        {
+          "phase": 20,
+          "count": 438,
+          "mean_squared_residual": 2.7840670030852985
+        },
+        {
+          "phase": 21,
+          "count": 428,
+          "mean_squared_residual": 2.891319157250793
+        },
+        {
+          "phase": 22,
+          "count": 268,
+          "mean_squared_residual": 3.1137471197222384
+        },
+        {
+          "phase": 23,
+          "count": 541,
+          "mean_squared_residual": 3.3504443375482134
+        },
+        {
+          "phase": 24,
+          "count": 418,
+          "mean_squared_residual": 3.424451088949981
+        },
+        {
+          "phase": 25,
+          "count": 203,
+          "mean_squared_residual": 3.4302039660080794
+        },
+        {
+          "phase": 26,
+          "count": 288,
+          "mean_squared_residual": 2.939155655628888
+        },
+        {
+          "phase": 27,
+          "count": 316,
+          "mean_squared_residual": 2.711262620244747
+        },
+        {
+          "phase": 28,
+          "count": 337,
+          "mean_squared_residual": 2.8650354861569745
+        },
+        {
+          "phase": 29,
+          "count": 363,
+          "mean_squared_residual": 2.507158416537219
+        },
+        {
+          "phase": 30,
+          "count": 238,
+          "mean_squared_residual": 3.0411632341287778
+        },
+        {
+          "phase": 31,
+          "count": 435,
+          "mean_squared_residual": 3.073249012473756
+        },
+        {
+          "phase": 32,
+          "count": 723,
+          "mean_squared_residual": 3.2670325720449878
+        },
+        {
+          "phase": 33,
+          "count": 285,
+          "mean_squared_residual": 3.5302335949599994
+        },
+        {
+          "phase": 34,
+          "count": 363,
+          "mean_squared_residual": 2.850254859178509
+        },
+        {
+          "phase": 35,
+          "count": 359,
+          "mean_squared_residual": 2.5187501011826954
+        },
+        {
+          "phase": 36,
+          "count": 385,
+          "mean_squared_residual": 2.8531172854168787
+        },
+        {
+          "phase": 37,
+          "count": 422,
+          "mean_squared_residual": 3.132923866521254
+        },
+        {
+          "phase": 38,
+          "count": 302,
+          "mean_squared_residual": 3.3951916262605697
+        },
+        {
+          "phase": 39,
+          "count": 527,
+          "mean_squared_residual": 3.692098657386882
+        },
+        {
+          "phase": 40,
+          "count": 687,
+          "mean_squared_residual": 3.4359145995156095
+        },
+        {
+          "phase": 41,
+          "count": 338,
+          "mean_squared_residual": 3.45204813130553
+        },
+        {
+          "phase": 42,
+          "count": 353,
+          "mean_squared_residual": 2.934038809233496
+        },
+        {
+          "phase": 43,
+          "count": 302,
+          "mean_squared_residual": 3.013454639443168
+        },
+        {
+          "phase": 44,
+          "count": 433,
+          "mean_squared_residual": 2.783284412847496
+        },
+        {
+          "phase": 45,
+          "count": 348,
+          "mean_squared_residual": 2.7136430378884056
+        },
+        {
+          "phase": 46,
+          "count": 208,
+          "mean_squared_residual": 3.1724463052785854
+        },
+        {
+          "phase": 47,
+          "count": 460,
+          "mean_squared_residual": 3.0199939804041684
+        },
+        {
+          "phase": 48,
+          "count": 555,
+          "mean_squared_residual": 3.728333786754267
+        },
+        {
+          "phase": 49,
+          "count": 185,
+          "mean_squared_residual": 3.1637409505431764
+        },
+        {
+          "phase": 50,
+          "count": 334,
+          "mean_squared_residual": 3.0220361282526875
+        },
+        {
+          "phase": 51,
+          "count": 317,
+          "mean_squared_residual": 2.930011711832772
+        },
+        {
+          "phase": 52,
+          "count": 324,
+          "mean_squared_residual": 3.2107503067253553
+        },
+        {
+          "phase": 53,
+          "count": 318,
+          "mean_squared_residual": 3.1026308348462934
+        },
+        {
+          "phase": 54,
+          "count": 262,
+          "mean_squared_residual": 3.548173788668232
+        },
+        {
+          "phase": 55,
+          "count": 450,
+          "mean_squared_residual": 3.535387350894225
+        },
+        {
+          "phase": 56,
+          "count": 621,
+          "mean_squared_residual": 3.6868604605234805
+        },
+        {
+          "phase": 57,
+          "count": 197,
+          "mean_squared_residual": 3.9285127344179283
+        },
+        {
+          "phase": 58,
+          "count": 258,
+          "mean_squared_residual": 3.5796691372596974
+        },
+        {
+          "phase": 59,
+          "count": 231,
+          "mean_squared_residual": 3.5956849814754253
+        },
+        {
+          "phase": 60,
+          "count": 383,
+          "mean_squared_residual": 3.5573354486301003
+        },
+        {
+          "phase": 61,
+          "count": 351,
+          "mean_squared_residual": 3.094976108650642
+        },
+        {
+          "phase": 62,
+          "count": 222,
+          "mean_squared_residual": 3.358862451130159
+        },
+        {
+          "phase": 63,
+          "count": 280,
+          "mean_squared_residual": 3.9615374264989467
+        }
+      ],
+      "same_within_rounding": true
+    }
+  },
+  "limitations": [
+    "Real RGB-D covariance NLL and all reported coverage levels worsen despite improved rank utility and TP@512.",
+    "Validation 90% nominal coverage deviation gate waived by explicit user direction.",
+    "Synthetic validation and real RGB-D test use different error protocols.",
+    "Two capture series, one seed and repeated frames do not establish unseen-scene generalization.",
+    "No unconditional uncertainty calibration or covariance-aware pose improvement claim."
+  ]
+}

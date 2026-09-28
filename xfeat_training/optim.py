@@ -33,7 +33,7 @@ LG_AUX = {
 
 
 def parameter_groups(model: nn.Module, task: str, *, lr: float, weight_decay: float) -> list[dict[str, Any]]:
-    if task not in {"xfeat", "lighterglue", "raco_rank", "raco_covariance"}:
+    if task not in {"xfeat", "lighterglue", "raco_rank", "raco_covariance", "raco_multiscale"}:
         raise ValueError(f"Unknown optimizer task: {task}")
     names_and_params = [(n, p) for n, p in model.named_parameters(remove_duplicate=False) if p.requires_grad]
     storage = [(str(p.device), p.untyped_storage().data_ptr()) for _, p in names_and_params]

@@ -31,7 +31,7 @@ CHECKPOINT_SCHEMA = 2
 RUN_CONTROL_KEYS = {"run_dir", "resume_from", "stop_after_steps", "save_every", "checkpoint_keep_best"}
 
 
-def configure_reproducibility(seed: int) -> None:
+def configure_reproducibility(seed: int, *, warn_only: bool = False) -> None:
     # Called before model construction/CUDA GEMMs in the CLI path.
     os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
     random.seed(seed)
@@ -41,7 +41,7 @@ def configure_reproducibility(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
-    torch.use_deterministic_algorithms(True)
+    torch.use_deterministic_algorithms(True, warn_only=warn_only)
 
 
 def checkpoint_signature(config: Mapping[str, Any], identities: Mapping[str, Any]) -> str:
@@ -80,6 +80,13 @@ def atomic_json(path: Path, value: Any) -> None:
         stream.flush()
         os.fsync(stream.fileno())
     os.replace(temporary, path)
+
+
+def pair_index_digest(indices: list[int]) -> str:
+    """Hash ordered pair-manifest row indices without writing source frame IDs."""
+    if not isinstance(indices, list) or any(type(index) is not int or index < 0 for index in indices):
+        raise ValueError("pair indices must be a list of nonnegative integers")
+    return json_hash(indices)
 
 
 def _cpu_tree(value: Any) -> Any:
@@ -270,7 +277,7 @@ def train_loop(
         else None
     )
     scaler = torch.amp.GradScaler("cuda") if cfg["precision"] == "fp16" else None
-    configure_reproducibility(cfg["seed"])
+    configure_reproducibility(cfg["seed"], warn_only=cfg.get("deterministic_warn_only", False))
     state: dict[str, Any] = {
         "successful_step": 0,
         "attempted_microbatches": 0,
@@ -311,6 +318,7 @@ def train_loop(
             "cudnn_deterministic": torch.backends.cudnn.deterministic,
             "cublas_workspace_config": os.environ.get("CUBLAS_WORKSPACE_CONFIG"),
             "deterministic_algorithms": torch.are_deterministic_algorithms_enabled(),
+            "deterministic_warn_only": torch.is_deterministic_algorithms_warn_only_enabled(),
         },
     )
     if state["best_model"] is not None:
@@ -345,6 +353,7 @@ def train_loop(
                 started = time.perf_counter()
                 totals: dict[str, float] = {}
                 sampled = []
+                accepted = []
                 if hasattr(task, "before_update"):
                     task.before_update(state["successful_step"], optimizer)
                 task.model.train()
@@ -370,6 +379,7 @@ def train_loop(
                     invalid_streak = 0
                     if not torch.isfinite(losses["loss"]):
                         raise FloatingPointError("Nonfinite training loss")
+                    accepted.append(pair_index)
                     scaled_loss = losses["loss"] / cfg["accumulation"]
                     if scaler is None:
                         scaled_loss.backward()
@@ -460,6 +470,13 @@ def train_loop(
                     "time": time.time(),
                     "losses": totals,
                     "pair_indices": sampled,
+                    "attempted_pair_digest": pair_index_digest(sampled),
+                    "accepted_pair_digest": pair_index_digest(accepted),
+                    "microbatch_skip_rate": (len(sampled) - len(accepted)) / len(sampled),
+                    "cumulative_microbatch_skip_rate": (
+                        state["attempted_microbatches"] - state["accepted_microbatches"]
+                    )
+                    / state["attempted_microbatches"],
                     "grad_norm": update["grad_norm"],
                     "parameter_gradient_norms": gradient_norms,
                     "attempted_microbatches": state["attempted_microbatches"],

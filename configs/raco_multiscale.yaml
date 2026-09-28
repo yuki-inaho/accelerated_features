@@ -1,0 +1,57 @@
+defaults:
+  - raco
+  - _self_
+
+task: raco_rank
+seed: 20260928
+deterministic_warn_only: true
+run_dir: ???
+pairs_dir: ???
+init_bundle: ???
+teacher_source: ???
+teacher_weights: ???
+max_steps: 5000
+stop_after_steps: 1000
+eval_every: 100
+save_every: 100
+checkpoint_keep_best: 3
+val_frames: 16
+image_size: [480, 640]
+auto_stop:
+  enabled: false
+
+multiscale:
+  variant: A
+  baseline:
+    rank_utility: 0.3264389
+    covariance_nll: 3.49498697
+  rank_kd:
+    enabled: true
+    weight: null
+    comparisons: 4096
+    budget: 512
+    boundary_radius: 128
+  covariance_kd:
+    enabled: false
+    weight: 0.0
+  feature_alignment:
+    enabled: false
+    weight: null
+  local_contrast:
+    enabled: false
+    weight: null
+    max_pairs: 256
+    min_pairs: 32
+    temperature: 0.1
+    exclusion_px: 16.0
+    match_distance_px: 3.0
+    ambiguity_margin_px: 0.5
+  relation_kd:
+    enabled: false
+    weight: null
+    temperature: 0.1
+  calibration:
+    batches: 8
+    shared_aux_fraction: 0.25
+    variant_aux_fraction: 0.25
+    covariance_weight_bounds: [0.1, 10.0]

@@ -36,8 +36,13 @@ def test_stop_callback_runs_after_checkpoint_and_flushed_logs(tmp_path):
     class Task:
         def __init__(self):
             self.model = nn.Linear(2, 2)
+            self.calls = 0
 
         def loss(self, index, accepted):
+            self.calls += 1
+            if self.calls == 1:
+                self.skip_reason = "fixture_skip"
+                return None
             return {"loss": self.model(torch.rand(1, 2)).square().mean()}
 
         def evaluate(self, step):
@@ -55,6 +60,15 @@ def test_stop_callback_runs_after_checkpoint_and_flushed_logs(tmp_path):
             assert (path / "checkpoints/step_000004.pt.json").exists()
             rows = [json.loads(line) for line in (path / "metrics.jsonl").read_text().splitlines()]
             assert rows[-1]["step"] == step
+            from xfeat_training.trainer import pair_index_digest
+
+            assert rows[-1]["attempted_pair_digest"] == pair_index_digest(rows[-1]["pair_indices"])
+            assert rows[-1]["accepted_pair_digest"] == pair_index_digest([0])
+            assert rows[0]["attempted_pair_digest"] == pair_index_digest([0, 0])
+            assert rows[0]["accepted_pair_digest"] == pair_index_digest([0])
+            assert rows[0]["microbatch_skip_rate"] == 0.5
+            assert rows[-1]["microbatch_skip_rate"] == 0.0
+            assert rows[-1]["cumulative_microbatch_skip_rate"] == 0.2
             return "validation_plateau"
 
     config = {
